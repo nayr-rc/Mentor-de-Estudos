@@ -3,20 +3,33 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Mentor IA API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: sessions
+    description: Study session operations
+  - name: habits
+    description: Daily habit operations
+  - name: questions
+    description: Question bank operations
+  - name: goals
+    description: Weekly goal operations
+  - name: dashboard
+    description: Dashboard aggregated data
+  - name: mentor
+    description: AI mentor operations
+  - name: user
+    description: User configuration
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +37,288 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /user/config:
+    get:
+      operationId: getUserConfig
+      tags: [user]
+      summary: Get user configuration
+      responses:
+        "200":
+          description: User config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserConfig"
+    put:
+      operationId: updateUserConfig
+      tags: [user]
+      summary: Update user configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserConfigBody"
+      responses:
+        "200":
+          description: Updated config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserConfig"
+
+  /sessions:
+    get:
+      operationId: listSessions
+      tags: [sessions]
+      summary: List study sessions
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 7
+        - name: subject
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [enem, programacao]
+      responses:
+        "200":
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Session"
+    post:
+      operationId: createSession
+      tags: [sessions]
+      summary: Register a new study session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSessionBody"
+      responses:
+        "201":
+          description: Created session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /sessions/stats:
+    get:
+      operationId: getSessionStats
+      tags: [sessions]
+      summary: Get aggregated session statistics
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: Session statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionStats"
+
+  /habits:
+    get:
+      operationId: listHabits
+      tags: [habits]
+      summary: List daily habits
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: List of habits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Habit"
+    post:
+      operationId: createOrUpdateHabit
+      tags: [habits]
+      summary: Create or update today's habit record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateHabitBody"
+      responses:
+        "200":
+          description: Upserted habit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Habit"
+
+  /questions:
+    get:
+      operationId: listQuestions
+      tags: [questions]
+      summary: List questions
+      parameters:
+        - name: subject
+          in: query
+          schema:
+            type: string
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+        - name: result
+          in: query
+          schema:
+            type: string
+            enum: [correct, wrong, skipped]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Paginated list of questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedQuestions"
+    post:
+      operationId: createQuestion
+      tags: [questions]
+      summary: Record a question answer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateQuestionBody"
+      responses:
+        "201":
+          description: Created question record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+
+  /questions/stats:
+    get:
+      operationId: getQuestionStats
+      tags: [questions]
+      summary: Get question accuracy stats by subject
+      responses:
+        "200":
+          description: Question stats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuestionSubjectStat"
+
+  /goals:
+    get:
+      operationId: listGoals
+      tags: [goals]
+      summary: Get current week's goals
+      responses:
+        "200":
+          description: List of current goals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Goal"
+    post:
+      operationId: createGoal
+      tags: [goals]
+      summary: Create a weekly goal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGoalBody"
+      responses:
+        "201":
+          description: Created goal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Get all dashboard data in one call
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardData"
+
+  /mentor/insight:
+    post:
+      operationId: getMentorInsight
+      tags: [mentor]
+      summary: Get a quick AI insight for the dashboard
+      responses:
+        "200":
+          description: Mentor insight
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MentorInsight"
+
+  /mentor/chat:
+    post:
+      operationId: sendMentorChat
+      tags: [mentor]
+      summary: Send a message to the AI mentor (streaming SSE)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MentorChatBody"
+      responses:
+        "200":
+          description: SSE stream of mentor response
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +326,323 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    UserConfig:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        prioritySubjects:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+      required: [id, name, prioritySubjects, createdAt]
+
+    UpdateUserConfigBody:
+      type: object
+      properties:
+        name:
+          type: string
+        prioritySubjects:
+          type: array
+          items:
+            type: string
+      required: [name]
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: integer
+        subject:
+          type: string
+        category:
+          type: string
+          enum: [enem, programacao]
+        durationMinutes:
+          type: integer
+        quality:
+          type: integer
+          minimum: 1
+          maximum: 5
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, subject, category, durationMinutes, quality, createdAt]
+
+    CreateSessionBody:
+      type: object
+      properties:
+        subject:
+          type: string
+        category:
+          type: string
+          enum: [enem, programacao]
+        durationMinutes:
+          type: integer
+          minimum: 5
+        quality:
+          type: integer
+          minimum: 1
+          maximum: 5
+        notes:
+          type: string
+          nullable: true
+      required: [subject, category, durationMinutes, quality]
+
+    SessionStats:
+      type: object
+      properties:
+        totalMinutesToday:
+          type: integer
+        totalMinutesWeek:
+          type: integer
+        consistencyPercent:
+          type: number
+        streak:
+          type: integer
+        bySubject:
+          type: array
+          items:
+            type: object
+            properties:
+              subject:
+                type: string
+              category:
+                type: string
+              totalMinutes:
+                type: integer
+            required: [subject, category, totalMinutes]
+        last7Days:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              totalMinutes:
+                type: integer
+            required: [date, totalMinutes]
+      required: [totalMinutesToday, totalMinutesWeek, consistencyPercent, streak, bySubject, last7Days]
+
+    Habit:
+      type: object
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+        sleepHours:
+          type: number
+          nullable: true
+        exerciseDone:
+          type: boolean
+        meditationDone:
+          type: boolean
+        waterLiters:
+          type: number
+          nullable: true
+        mood:
+          type: integer
+          minimum: 1
+          maximum: 5
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, date, exerciseDone, meditationDone, createdAt]
+
+    CreateHabitBody:
+      type: object
+      properties:
+        date:
+          type: string
+        sleepHours:
+          type: number
+          nullable: true
+        exerciseDone:
+          type: boolean
+        meditationDone:
+          type: boolean
+        waterLiters:
+          type: number
+          nullable: true
+        mood:
+          type: integer
+          minimum: 1
+          maximum: 5
+          nullable: true
+      required: [date]
+
+    Question:
+      type: object
+      properties:
+        id:
+          type: integer
+        subject:
+          type: string
+        topic:
+          type: string
+          nullable: true
+        result:
+          type: string
+          enum: [correct, wrong, skipped]
+        difficulty:
+          type: integer
+          minimum: 1
+          maximum: 5
+          nullable: true
+        source:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, subject, result, createdAt]
+
+    CreateQuestionBody:
+      type: object
+      properties:
+        subject:
+          type: string
+        topic:
+          type: string
+          nullable: true
+        result:
+          type: string
+          enum: [correct, wrong, skipped]
+        difficulty:
+          type: integer
+          minimum: 1
+          maximum: 5
+          nullable: true
+        source:
+          type: string
+          nullable: true
+      required: [subject, result]
+
+    PaginatedQuestions:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Question"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required: [data, total, page, limit]
+
+    QuestionSubjectStat:
+      type: object
+      properties:
+        subject:
+          type: string
+        total:
+          type: integer
+        correct:
+          type: integer
+        wrong:
+          type: integer
+        skipped:
+          type: integer
+        accuracyPercent:
+          type: number
+      required: [subject, total, correct, wrong, skipped, accuracyPercent]
+
+    Goal:
+      type: object
+      properties:
+        id:
+          type: integer
+        subject:
+          type: string
+          nullable: true
+        targetMinutes:
+          type: integer
+        weekStart:
+          type: string
+        achieved:
+          type: boolean
+        actualMinutes:
+          type: integer
+      required: [id, targetMinutes, weekStart, achieved, actualMinutes]
+
+    CreateGoalBody:
+      type: object
+      properties:
+        subject:
+          type: string
+          nullable: true
+        targetMinutes:
+          type: integer
+        weekStart:
+          type: string
+      required: [targetMinutes, weekStart]
+
+    DashboardData:
+      type: object
+      properties:
+        sessionStats:
+          $ref: "#/components/schemas/SessionStats"
+        todayHabits:
+          $ref: "#/components/schemas/Habit"
+          nullable: true
+        questionStats:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionSubjectStat"
+        goals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Goal"
+        recentSessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Session"
+        medicineIndex:
+          type: number
+        codeIndex:
+          type: number
+        streak:
+          type: integer
+        userName:
+          type: string
+        latestInsight:
+          type: string
+          nullable: true
+      required: [sessionStats, questionStats, goals, recentSessions, medicineIndex, codeIndex, streak, userName]
+
+    MentorInsight:
+      type: object
+      properties:
+        insight:
+          type: string
+        type:
+          type: string
+          enum: [daily, decision, weekly_review]
+      required: [insight, type]
+
+    MentorChatBody:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              role:
+                type: string
+                enum: [user, assistant]
+              content:
+                type: string
+            required: [role, content]
+      required: [messages]

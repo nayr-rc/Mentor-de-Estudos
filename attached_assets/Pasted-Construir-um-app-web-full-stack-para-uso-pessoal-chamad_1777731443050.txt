@@ -1,0 +1,342 @@
+Construir um app web full-stack para uso pessoal chamado "Mentor IA" — um sistema que acompanha rotina de estudos, sono e hábitos diários, e usa IA generativa (Claude API) para gerar decisões práticas e personalizadas como:
+
+"Se você estudar Biologia agora por 1h, sua consistência semanal sobe para 87% — isso representa ~+4% na estimativa do seu desempenho em CN no ENEM."
+
+O app tem dois focos temáticos simultâneos:
+
+ENEM — Medicina: Biologia, Química, Física, Matemática, Redação, CH, LC
+Programação: Algoritmos, estrutura de dados, projetos pessoais, LeetCode/Beecrowd
+
+
+🛠 Stack Técnica
+Frontend
+
+HTML5 + CSS3 + JavaScript vanilla (sem frameworks — máxima leveza)
+CSS Custom Properties para tema dark/light
+Animações via CSS transitions e Web Animations API
+Fonte display: Syne (Google Fonts) — corpo: DM Sans
+Layout: CSS Grid + Flexbox, mobile-first, totalmente responsivo
+
+Backend
+
+Node.js + Express.js (servidor local, porta 3000)
+SQLite via better-sqlite3 — banco de dados local, zero configuração
+Claude API (Anthropic) via @anthropic-ai/sdk — modelo claude-sonnet-4-20250514
+Autenticação: nenhuma (uso pessoal, local)
+.env para ANTHROPIC_API_KEY
+
+Estrutura de arquivos
+mentor-ia/
+├── server/
+│   ├── index.js          # Express + rotas
+│   ├── db.js             # SQLite setup + queries
+│   ├── mentor.js         # Lógica de chamadas Claude API
+│   └── schema.sql        # Schema do banco
+├── public/
+│   ├── index.html        # SPA principal
+│   ├── style.css         # Design system completo
+│   └── app.js            # Toda lógica de frontend
+├── .env
+└── package.json
+
+🎨 Design System & Identidade Visual
+Paleta
+css:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #111118;
+  --bg-card: #16161e;
+  --bg-card-hover: #1e1e28;
+  --accent-primary: #7c6af5;   /* Roxo elétrico — ações principais */
+  --accent-secondary: #3ecf8e; /* Verde menta — sucesso, medicina */
+  --accent-code: #f97316;      /* Laranja — programação */
+  --accent-warn: #fbbf24;      /* Âmbar — alertas, streaks */
+  --text-primary: #f0f0f8;
+  --text-secondary: #8888a8;
+  --text-muted: #444458;
+  --border: #22222e;
+}
+Personalidade visual
+
+Tema dark por padrão (toggle light disponível)
+Cards com border: 1px solid var(--border) e border-radius: 16px
+Micro-animações: hover elevates cards (transform: translateY(-2px))
+Gradient sutil no header: linear-gradient(135deg, #7c6af520, #3ecf8e10)
+Sem sombras pesadas — profundidade via camadas de background
+Indicadores de progresso: barras finas animadas com stroke-dasharray em SVG
+
+
+📦 Schema do Banco de Dados (SQLite)
+sql-- Sessões de estudo registradas
+CREATE TABLE sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  subject TEXT NOT NULL,          -- 'biologia', 'matematica', 'python', etc.
+  category TEXT NOT NULL,         -- 'enem' ou 'programacao'
+  duration_minutes INTEGER,
+  quality INTEGER CHECK(quality BETWEEN 1 AND 5),
+  notes TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Hábitos diários
+CREATE TABLE habits (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  date TEXT NOT NULL,             -- 'YYYY-MM-DD'
+  sleep_hours REAL,
+  exercise_done INTEGER DEFAULT 0,
+  meditation_done INTEGER DEFAULT 0,
+  water_liters REAL,
+  mood INTEGER CHECK(mood BETWEEN 1 AND 5),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Metas semanais
+CREATE TABLE goals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  subject TEXT,
+  target_minutes INTEGER,
+  week_start TEXT,                -- 'YYYY-MM-DD' (segunda-feira)
+  achieved INTEGER DEFAULT 0
+);
+
+-- Questões respondidas (ENEM)
+CREATE TABLE questions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  subject TEXT,
+  topic TEXT,
+  result TEXT CHECK(result IN ('correct', 'wrong', 'skipped')),
+  difficulty INTEGER CHECK(difficulty BETWEEN 1 AND 5),
+  source TEXT,                    -- 'enem2023', 'lista_propria', etc.
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Cache de insights do mentor
+CREATE TABLE mentor_insights (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  context_hash TEXT,
+  insight TEXT,
+  type TEXT,                      -- 'daily', 'decision', 'weekly_review'
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+🖥 Páginas & Funcionalidades
+1. Dashboard (Tela Inicial) — /
+Layout: sidebar fixa + área principal com scroll
+Sidebar (240px)
+
+Logo + nome "Mentor IA"
+Avatar iniciais do usuário (configurável)
+Navegação: Dashboard, Registrar, Questões, Hábitos, Mentor, Análises
+Card inferior: streak atual com ícone de chama + contador de dias
+
+Área principal
+
+Header: saudação dinâmica ("Boa tarde, Ryan — hora de atacar Biologia") + hora atual
+Score Bar: 3 métricas em linha
+
+Índice Medicina (%) — calculado via taxa de acertos CN + BIO + QUI
+Índice Code (%) — calculado via horas semanais de programação vs meta
+Ofensiva: N dias consecutivos com ≥1 sessão registrada
+
+
+Grid de stats (5 cards):
+
+Horas de estudo hoje
+Questões respondidas (7 dias)
+Taxa de acerto ENEM (%)
+Horas de código (semana)
+Horas de sono (média 7 dias)
+Cada card mostra variação % vs período anterior com seta colorida
+
+
+Card "Mentor Agora" (destaque visual, borda accent):
+
+Insight gerado pela IA baseado no contexto atual
+Botão: "Pedir nova análise" (chama API)
+Indicador de loading animado durante a chamada
+
+
+Sessão recente: última matéria estudada + botão "Continuar"
+Progresso semanal: barra por matéria (7 barras: Bio, Qui, Fis, Mat, Red, CH, LC + Code)
+
+
+2. Registrar Sessão — /register
+Formulário interativo em steps (sem recarregar a página):
+Step 1 — O que você estudou?
+
+Toggle visual: [ENEM] [PROGRAMAÇÃO]
+Grid de matérias clicáveis (ENEM: ícones por área; Code: linguagens/tópicos)
+Campo livre de tópico específico (ex: "Genética mendeliana", "Binary Search")
+
+Step 2 — Como foi?
+
+Slider de duração (5min a 4h, step 5min) com display visual
+Rating de qualidade: 5 estrelas estilizadas
+Textarea: anotações livres
+
+Step 3 — Hábitos de hoje
+
+Slider de sono (0–12h)
+Toggles: Exercício, Meditação
+Slider de água (0–4L)
+Mood: 5 emojis clicáveis estilizados via CSS
+
+Confirmação animada: após submit, card voa para o dashboard com animação + insight instantâneo do mentor.
+
+3. Banco de Questões — /questions
+
+Formulário rápido: matéria → tópico → resultado (✓ / ✗ / pulei) → dificuldade → fonte
+Botão de registro em 1 clique (modo rápido para baterias de questões)
+Tabela paginada de histórico com filtros: matéria, período, resultado
+Mini-gráfico: taxa de acerto por matéria (barras horizontais coloridas)
+Card de análise: tópicos com maior taxa de erro (alimentado por query SQL + IA)
+
+
+4. Hábitos — /habits
+
+Visualização de calendário do mês atual
+Cada dia: dot colorido indicando qualidade (verde → vermelho)
+Clique no dia: abre detalhes em modal lateral
+Gráficos de linha: sono × mood ao longo do tempo
+Correlação textual gerada pela IA: "Nos dias com 7h+ de sono, sua taxa de acertos sobe X%"
+
+
+5. Mentor IA — /mentor (TELA PRINCIPAL)
+Interface de chat interativo com o Claude como mentor pessoal.
+Sistema de contexto automático: toda conversa inclui, invisível ao usuário, um bloco de contexto com:
+- Últimas 7 sessões de estudo (matéria, duração, qualidade)
+- Média de sono dos últimos 7 dias
+- Taxa de acerto por matéria (últimos 30 dias)
+- Metas semanais vs realizado
+- Ofensiva atual e histórico de consistência
+- Horário atual e dia da semana
+System prompt do mentor:
+Você é o Mentor IA — um coach de estudos pessoal, direto e analítico.
+O usuário está se preparando para o ENEM com foco em Medicina,
+e também desenvolve habilidades em programação.
+
+Seu estilo: objetivo, sem enrolação, usa dados reais do histórico para
+embasar cada recomendação. Quando apropriado, dê estimativas numéricas
+(ex: "estudar isso hoje aumenta sua consistência semanal em ~12%").
+Não seja genérico — use os dados do contexto para personalizar.
+Responda sempre em português brasileiro.
+UI do chat:
+
+Histórico de mensagens com scroll
+Área de input com Enter para enviar, Shift+Enter para quebra de linha
+Indicador "Mentor digitando..." com 3 pontos pulsantes
+Streaming de resposta (via SSE ou fetch com ReadableStream)
+Sugestões rápidas como chips clicáveis:
+
+"O que devo estudar agora?"
+"Como está meu desempenho esta semana?"
+"Qual meu pior tópico em Biologia?"
+"Crie um plano para os próximos 3 dias"
+
+
+
+
+6. Análises — /analytics
+
+Gráfico de barras: horas de estudo por dia (últimos 30 dias)
+Gráfico de radar: desempenho por área do ENEM (0–100%)
+Heat map semanal: qual hora do dia você mais estuda (estilo GitHub contributions)
+Tabela: matérias × taxa de acerto × horas investidas
+Card: "Seu horário mais produtivo" (baseado em qualidade média por faixa de hora)
+
+
+🔌 API Routes (Express)
+javascript// Sessions
+POST   /api/sessions          // Registrar nova sessão
+GET    /api/sessions           // Listar sessões (query: ?days=7&subject=biologia)
+GET    /api/sessions/stats     // Stats agregadas
+
+// Habits
+POST   /api/habits             // Registrar hábitos do dia
+GET    /api/habits             // Histórico de hábitos
+
+// Questions
+POST   /api/questions          // Registrar questão
+GET    /api/questions/stats    // Taxa de acerto por matéria
+
+// Goals
+POST   /api/goals              // Criar meta semanal
+GET    /api/goals/current      // Metas da semana atual
+
+// Mentor (IA)
+POST   /api/mentor/chat        // Chat com streaming (SSE)
+POST   /api/mentor/insight     // Insight rápido para dashboard (sem streaming)
+
+// Dashboard
+GET    /api/dashboard          // Todos os dados do dashboard em 1 chamada
+
+🤖 Lógica do Mentor (mentor.js)
+Função getDashboardInsight(userId)
+
+Busca contexto completo no banco (últimas sessões, hábitos, questões)
+Calcula métricas derivadas:
+
+Consistência semanal (% de dias com estudo)
+Estimativa de desempenho por área (baseada em taxa de acerto + horas)
+"Dívida de revisão": matérias não estudadas há mais de X dias
+
+
+Monta prompt com contexto serializado
+Retorna insight curto (2–4 linhas) focado em decisão imediata
+
+Função streamMentorChat(messages, context)
+
+Usa stream: true na chamada Claude
+Faz pipe do stream via SSE para o frontend
+Inclui contexto automático como system message
+
+Cálculo de Probabilidade (heurística local)
+javascriptfunction estimateImpact(subject, durationMinutes, currentStats) {
+  const consistencyDelta = durationMinutes >= 45 ? 0.08 : 0.03;
+  const accuracySubjectDelta = (durationMinutes / 60) * 0.02;
+  const weaknessMultiplier = currentStats[subject]?.accuracy < 0.5 ? 1.8 : 1.0;
+  return {
+    consistencyGain: (consistencyDelta * 100).toFixed(1) + '%',
+    estimatedAccuracyGain: (accuracySubjectDelta * weaknessMultiplier * 100).toFixed(1) + '%'
+  };
+}
+
+✅ Requisitos de UX
+
+Tempo de resposta do dashboard: < 200ms (tudo local)
+Streaming do chat: primeira palavra aparece em < 1s
+Sem login: app inicia direto no dashboard
+Nome configurável: primeira vez abre modal de setup (nome + matérias prioritárias)
+PWA-ready: manifest.json + service worker básico para funcionar offline (só dashboard)
+Atalhos de teclado:
+
+N → abrir registro rápido de sessão
+Q → abrir registro de questão
+M → abrir mentor chat
+ESC → fechar modal/sidebar aberta
+
+
+Toast notifications: feedback visual para cada ação (salvo, erro, insight gerado)
+Loading states: skeletons animados em todos os cards enquanto carregam
+
+
+🚀 Setup & Inicialização
+bash# Instalar
+npm install express better-sqlite3 @anthropic-ai/sdk dotenv cors
+
+# .env
+ANTHROPIC_API_KEY=sk-ant-...
+PORT=3000
+
+# Rodar
+node server/index.js
+# Abre em: http://localhost:3000
+O banco SQLite é criado automaticamente na primeira execução via schema.sql.
+
+📌 Extras & Melhorias Futuras (não bloqueantes)
+
+ Importar gabarito de provas ENEM via CSV (auto-preenche questões)
+ Timer Pomodoro integrado ao registro de sessão
+ Exportar relatório semanal em PDF
+ Notificações desktop via Web Notifications API
+ Modo "Simulado": cronômetro + registro em lote de questões
+ Sync com Google Calendar para visualizar sessões planejadas
