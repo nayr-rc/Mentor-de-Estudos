@@ -25,3 +25,5 @@ export * from "./questions";
 export * from "./goals";
 export * from "./userConfig";
 export * from "./mentorInsights";
+export * from "./enemPractice";
+export * from "./trainingExercises";

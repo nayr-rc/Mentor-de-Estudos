@@ -11,6 +11,8 @@ import Habits from "@/pages/Habits";
 import Mentor from "@/pages/Mentor";
 import Analytics from "@/pages/Analytics";
 import Settings from "@/pages/Settings";
+import EnemPractice from "@/pages/EnemPractice";
+import Training from "@/pages/Training";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -33,6 +35,8 @@ function Router() {
         <Route path="/mentor" component={Mentor} />
         <Route path="/analytics" component={Analytics} />
         <Route path="/settings" component={Settings} />
+        <Route path="/enem" component={EnemPractice} />
+        <Route path="/training" component={Training} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

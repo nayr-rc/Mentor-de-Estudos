@@ -7,6 +7,8 @@ import goalsRouter from "./goals";
 import dashboardRouter from "./dashboard";
 import mentorRouter from "./mentor";
 import userRouter from "./user";
+import enemRouter from "./enem";
+import trainingRouter from "./training";
 
 const router: IRouter = Router();
 
@@ -18,5 +20,7 @@ router.use(goalsRouter);
 router.use(dashboardRouter);
 router.use(mentorRouter);
 router.use(userRouter);
+router.use(enemRouter);
+router.use(trainingRouter);
 
 export default router;

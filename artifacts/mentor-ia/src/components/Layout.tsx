@@ -9,6 +9,8 @@ import {
   Settings,
   Flame,
   GraduationCap,
+  FileText,
+  Code2,
 } from "lucide-react";
 import { useGetDashboard } from "@workspace/api-client-react";
 
@@ -16,6 +18,8 @@ const navItems = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard },
   { path: "/register", label: "Registrar", icon: PlusCircle },
   { path: "/questions", label: "Questões", icon: HelpCircle },
+  { path: "/enem", label: "ENEM", icon: FileText },
+  { path: "/training", label: "Programação", icon: Code2 },
   { path: "/habits", label: "Hábitos", icon: Calendar },
   { path: "/mentor", label: "Mentor IA", icon: BrainCircuit },
   { path: "/analytics", label: "Análises", icon: BarChart3 },
